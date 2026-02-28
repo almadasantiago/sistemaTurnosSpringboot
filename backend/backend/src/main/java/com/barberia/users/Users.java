@@ -1,4 +1,4 @@
-package com.barberia.entities;
+package com.barberia.users;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -15,8 +15,6 @@ public class Users {
     private String email; 
     private String password; 
 
-    @Enumerated(EnumType.STRING)
-    private Rol rol; 
 
     private Double porcentajeComision; 
 }

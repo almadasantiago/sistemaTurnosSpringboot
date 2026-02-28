@@ -1,4 +1,4 @@
-package com.barberia.entities;
+package com.barberia.barberservices;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -6,7 +6,7 @@ import lombok.Data;
 @Entity
 @Data
 
-public class Services {
+public class Service {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
 
