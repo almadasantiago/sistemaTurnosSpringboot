@@ -2,8 +2,8 @@ package com.barberia.appointments;
 
 import java.time.LocalDateTime;
 
-import com.barberia.barberservices.Service;
-import com.barberia.users.Users;
+import com.barberia.barberservices.BarberService;
+import com.barberia.users.User;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -20,13 +20,13 @@ public class Appointment {
     private Long id;
 
     @ManyToOne
-    private Users cliente; 
+    private User cliente; 
 
     @ManyToOne
-    private Users barbero; 
+    private User barbero; 
 
     @ManyToOne
-    private Service service; 
+    private BarberService service; 
 
     private LocalDateTime fechaHoraInicio; 
     private LocalDateTime fechaHoraFin; 

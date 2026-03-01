@@ -2,7 +2,7 @@ package com.barberia.workschedules;
 
 import java.time.LocalTime;
 
-import com.barberia.users.Users;
+import com.barberia.users.User;
 
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -18,7 +18,7 @@ public class WorkSchedule {
     @ManyToOne
     @JoinColumn(name = "barbero_id") 
     
-    private Users barbero; 
+    private User barbero; 
     
     private Integer diaSemana; 
     private LocalTime horaEntrada; 

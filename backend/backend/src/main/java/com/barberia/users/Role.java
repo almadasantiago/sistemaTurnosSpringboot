@@ -1,5 +1,7 @@
 package com.barberia.users;
 
-public class Role {
-    
+public enum Role {
+    ADMIN,
+    BARBER,
+    CLIENT
 }

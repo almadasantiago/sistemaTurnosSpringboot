@@ -1,5 +1,6 @@
 package com.barberia.users.dto;
 
-public class UserSummary {
-    
-}
+public record UserSummary(
+    Long id,
+    String name
+) {}

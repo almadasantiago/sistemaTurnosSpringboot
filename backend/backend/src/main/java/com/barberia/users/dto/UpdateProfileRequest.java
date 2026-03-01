@@ -2,7 +2,7 @@ package com.barberia.users.dto;
 
 import jakarta.validation.constraints.*;
 
-public record RegisterRequest(
+public record UpdateProfileRequest(
 
     @NotBlank(message = "El nombre es obligatorio")
     String name,
@@ -11,9 +11,9 @@ public record RegisterRequest(
     @Email(message = "El email no tiene un formato válido")
     String email,
 
-    @NotBlank(message = "La contraseña es obligatoria")
-    @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres")
-    String password
+    @NotBlank(message = "La contraseña actual es obligatoria")
+    String currentPassword,
 
+    String newPassword
 
 ) {}
