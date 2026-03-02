@@ -1,6 +1,8 @@
 package com.barberia.shared.config;
 
 import com.barberia.users.UserDetailsServiceImpl;
+
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -63,29 +65,35 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())
+    http
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        .csrf(csrf -> csrf.disable())
 
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .sessionManagement(session ->
+            session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            .authorizeHttpRequests(auth -> auth
+        .exceptionHandling(ex -> ex
+            .authenticationEntryPoint((request, response, authException) -> {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No autenticado");
+            })
+        )
 
-                .requestMatchers("/api/auth/**").permitAll()
+        .authorizeHttpRequests(auth -> auth
 
-                .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/users/barbers").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/users/{id}").hasRole("ADMIN")
+            .requestMatchers("/api/auth/**").permitAll()
 
-                .requestMatchers(HttpMethod.PUT, "/api/users/me").authenticated()
+            .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.POST, "/api/users/barbers").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.PUT, "/api/users/{id}").hasRole("ADMIN")
 
-                .anyRequest().authenticated()
-            )
+            .requestMatchers(HttpMethod.PUT, "/api/users/me").authenticated()
 
-            .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .anyRequest().authenticated()
+        )
 
-        return http.build();
+        .authenticationProvider(authenticationProvider())
+        .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+    return http.build();
     }
 }

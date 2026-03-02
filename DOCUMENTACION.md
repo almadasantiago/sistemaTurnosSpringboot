@@ -1,112 +1,171 @@
-# Sistema de Turnos - Documentación del Proyecto
+# Sistema de Turnos — Documentación Técnica
 
-## ¿De qué se trata este sistema?
+## Descripción del sistema
 
-Es una aplicación para gestionar turnos de una barbería. Permite que:
-- Los **clientes** reserven turnos con un barbero.
-- Los **barberos** vean su agenda y horarios.
-- El **admin** gestione usuarios, servicios y comisiones.
+Aplicación fullstack para la gestión de turnos de una barbería. Contempla tres roles de usuario (ADMIN, BARBER, CLIENT), autenticación stateless con JWT, control de horarios de barberos, servicios con precio y duración configurable, y cálculo de comisiones automático al completar un turno.
+
+---
+
+## Stack tecnológico
+
+| Capa | Tecnología | Versión |
+|---|---|---|
+| Backend | Java + Spring Boot | 3.x |
+| Persistencia | Spring Data JPA + Hibernate | — |
+| Base de datos | MySQL | — |
+| Seguridad | Spring Security + JWT (jjwt) | — |
+| Frontend | Angular | 17 |
+| Estado reactivo | Angular Signals | (nativo Angular 17) |
+| HTTP | Angular HttpClient | — |
+| Estilos | SCSS | — |
 
 ---
 
 ## Arquitectura: Monolito Modular
 
-El proyecto usa una arquitectura llamada **monolito modular**. Esto significa que todo está en una sola aplicación, pero organizado en módulos separados según su responsabilidad. Es más simple que microservicios pero más ordenado que un monolito sin estructura.
+Se eligió **monolito modular** (en lugar de microservicios) porque:
+- El dominio del problema no justifica la complejidad operativa de múltiples servicios desplegados por separado.
+- Permite mantener cohesión de código sin sacrificar organización interna.
+- Es fácil de migrar a microservicios en el futuro si el sistema escala: los módulos ya están aislados.
 
 ```
 sistemaTurnosSpringboot/
-├── backend/   → Java + Spring Boot + JPA (la lógica y la base de datos)
-└── frontend/  → Angular 17 (la interfaz visual)
+├── backend/
+│   └── src/main/java/com/barberia/
+│       ├── users/
+│       ├── appointments/
+│       ├── barberservices/
+│       ├── workschedules/
+│       └── shared/
+│           ├── config/       → Seguridad, JWT, CORS
+│           └── exception/    → Manejo global de errores
+└── frontend/
+    └── src/app/
+        ├── core/             → Modelos, servicios, guards, interceptores
+        ├── features/         → Componentes por dominio (auth, dashboard, appointments)
+        └── shared/           → Componentes reutilizables
 ```
 
-El frontend le habla al backend a través de una **API REST** (peticiones HTTP como GET, POST, PUT, DELETE).
+La comunicación entre ambas capas es exclusivamente a través de **REST API**. El frontend nunca accede directamente a la base de datos.
 
 ---
 
-## BACKEND (Java + Spring Boot + JPA)
+## BACKEND
 
-### ¿Cómo está organizado?
+### Estructura interna de cada módulo
 
-Cada funcionalidad tiene su propia carpeta (módulo):
+Cada módulo sigue el patrón de capas estándar de Spring:
 
 ```
-com/barberia/
-├── users/           → Todo lo relacionado a usuarios
-├── appointments/    → Todo lo relacionado a turnos
-├── barberservices/  → Servicios que ofrece la barbería (corte, barba, etc.)
-├── workschedules/   → Horarios de trabajo de los barberos
-└── shared/          → Cosas compartidas (manejo de errores, etc.)
+users/
+├── User.java                   → @Entity (tabla en la BD)
+├── Role.java                   → @Enum (ADMIN, BARBER, CLIENT)
+├── UserRepository.java         → @Repository (JPA)
+├── UserService.java            → @Service (lógica de negocio)
+├── UserController.java         → @RestController (endpoints HTTP)
+├── UserDetailsServiceImpl.java → integración con Spring Security
+└── dto/
+    ├── UserResponse.java
+    ├── UpdateUserRequest.java
+    └── RegisterRequest.java
 ```
 
-Dentro de cada módulo hay capas:
-
-| Capa | Archivo | ¿Qué hace? |
-|---|---|---|
-| **Entity** | `Users.java`, `Appointment.java`, etc. | Representa una tabla en la base de datos |
-| **Repository** | `UserRepository.java`, etc. | Se comunica con la base de datos |
-| **Service** | `AppointmentService.java`, etc. | Contiene la lógica del negocio |
-| **Controller** | `UserController.java`, etc. | Recibe y responde las peticiones HTTP |
-| **DTO** | `UserResponse.java`, etc. | Define qué datos se envían/reciben |
+> **¿Por qué DTOs separados de la Entity?**
+> La entidad `User` contiene `password`. Exponer la entidad directamente en los endpoints significaría enviar el hash de la contraseña en cada respuesta. Los DTOs permiten controlar exactamente qué campos se exponen al cliente.
 
 ---
 
-### Entidades (tablas en la base de datos)
+### Entidades (modelo de datos)
 
-#### Users (Usuarios)
+#### User
+
 ```java
-// Representa a cualquier persona del sistema: admin, barbero o cliente
-public class Users {
+@Entity
+@Table(name = "users")
+public class User {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String nombre;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(nullable = false, unique = true)
     private String email;
-    private String password;
-    private Double porcentajeComision; // Solo aplica a barberos
+
+    @Column(nullable = false)
+    private String password;         // Almacenado como BCrypt hash, nunca en texto plano
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;               // ADMIN | BARBER | CLIENT
+
+    @Column
+    private Double commissionRate;   // Solo relevante para BARBER; null para los demás
 }
 ```
-> Nota: El campo `porcentajeComision` solo tiene valor si el usuario es barbero. Para clientes y admin queda en `null`.
+
+> Se usa `@Enumerated(EnumType.STRING)` en lugar de `ORDINAL` para que la base de datos almacene `"ADMIN"` y no `0`. Si en el futuro se reordena el enum, `ORDINAL` rompería datos históricos.
 
 ---
 
-#### Service (Servicios de la barbería)
+#### Appointment
+
 ```java
-// Representa un servicio ofrecido: corte de pelo, barba, etc.
-public class Service {
+@Entity
+public class Appointment {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne private Users cliente;
+    @ManyToOne private Users barbero;
+    @ManyToOne private Service service;
+
+    private LocalDateTime fechaHoraInicio;
+    private LocalDateTime fechaHoraFin;
+
+    private String estado;             // PENDING | CONFIRMED | COMPLETED | CANCELLED
+
+    private Double precioFinal;        // Se bloquea al completar el turno
+    private Double comisionBarberia;   // Calculada en base al commissionRate del barbero
+    private Double gananciaBarbero;    // precioFinal - comisionBarberia
+}
+```
+
+> Los campos financieros son `null` hasta que el turno pasa a `COMPLETED`. Se bloquean en ese momento para preservar el historial aunque el precio del servicio cambie después.
+
+---
+
+#### Service (servicio de la barbería)
+
+```java
+@Entity
+public class Service {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     private String nombre;
     private Double precio;
     private Integer duracionMinutos;
 }
 ```
 
----
-
-#### Appointment (Turno)
-```java
-// Representa un turno reservado
-public class Appointment {
-    private Long id;
-    private Users cliente;        // Quién reservó
-    private Users barbero;        // Quién lo atiende
-    private Service service;      // Qué servicio se realiza
-    private LocalDateTime fechaHoraInicio;
-    private LocalDateTime fechaHoraFin;
-    private String estado;        // PENDING, CONFIRMED, COMPLETED, CANCELLED
-    private Double precioFinal;
-    private Double comisionBarberia;
-    private Double gananciaBarbero;
-}
-```
-> Los campos `precioFinal`, `comisionBarberia` y `gananciaBarbero` se calculan cuando el turno se completa.
+> **Decisión de diseño — soft delete:** Los servicios no se eliminan físicamente. Cuando se dan de baja se marcan con `finished = true`. Esto preserva el historial de turnos anteriores que referenciaban ese servicio.
 
 ---
 
-#### WorkSchedule (Horario de trabajo)
+#### WorkSchedule
+
 ```java
-// Define los días y horarios en que trabaja un barbero
+@Entity
 public class WorkSchedule {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "barbero_id")
     private Users barbero;
-    private Integer diaSemana;    // 1=Lunes, 7=Domingo
+
+    private Integer diaSemana;     // Pendiente: migrar a enum DayOfWeek para alinearse con el frontend
     private LocalTime horaEntrada;
     private LocalTime horaSalida;
 }
@@ -114,84 +173,201 @@ public class WorkSchedule {
 
 ---
 
+### Seguridad (Spring Security + JWT)
+
+La autenticación es **stateless** (sin sesión en el servidor). Se eligió JWT porque:
+- El frontend y el backend están desacoplados; no hay cookies de sesión compartidas.
+- El token es autosuficiente: contiene el email y el rol del usuario firmados criptográficamente.
+- Escala horizontalmente sin necesidad de sesión compartida entre instancias.
+
+#### Flujo de autenticación
+
+```
+1. POST /api/auth/login  { email, password }
+         ↓
+2. Spring verifica credenciales contra la BD (BCrypt compare)
+         ↓
+3. Se genera un JWT firmado con HS256
+   Payload: { sub: email, role: "ADMIN", iat: ..., exp: ... }
+         ↓
+4. El frontend recibe el token y lo guarda en localStorage
+         ↓
+5. Cada petición posterior incluye: Authorization: Bearer <token>
+         ↓
+6. JwtAuthFilter intercepta, valida firma y expiración,
+   e inyecta el usuario en el SecurityContext de Spring
+```
+
+#### Clases involucradas en seguridad
+
+| Clase | Responsabilidad |
+|---|---|
+| `JwtService` | Generar, parsear y validar tokens JWT |
+| `JwtAuthFilter` | Filtro HTTP que extrae y valida el token en cada request |
+| `UserDetailsServiceImpl` | Carga el usuario desde la BD por email para Spring Security |
+| `SecurityConfig` | Define reglas de acceso por rol, CORS, y encadenamiento de filtros |
+
+#### ¿Por qué `UserDetailsServiceImpl` está separado de `SecurityConfig`?
+
+La implementación original definía `UserDetailsService` como un `@Bean` dentro de `SecurityConfig`. Esto generaba una **dependencia circular en el arranque de Spring**:
+
+```
+SecurityConfig → JwtAuthFilter → UserDetailsService → SecurityConfig
+```
+
+Spring no puede resolver este ciclo. La solución fue extraer `UserDetailsServiceImpl` como un `@Service` independiente en el paquete `users`, que Spring instancia de forma autónoma antes de configurar la seguridad.
+
+#### CORS
+
+El backend corre en `localhost:8080` y el frontend en `localhost:4200`. Sin configuración CORS explícita, el navegador rechaza todas las respuestas por la política Same-Origin.
+
+```java
+@Bean
+public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration config = new CorsConfiguration();
+    config.setAllowedOrigins(List.of("http://localhost:4200"));
+    config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+    config.setAllowedHeaders(List.of("*"));
+    config.setAllowCredentials(true);
+    // ...
+}
+```
+
+> En producción, `allowedOrigins` debe cambiarse al dominio real del frontend.
+
+#### Reglas de autorización por endpoint
+
+```
+/api/auth/**             → público (login, registro)
+GET  /api/users          → solo ADMIN
+POST /api/users/barbers  → solo ADMIN
+PUT  /api/users/{id}     → solo ADMIN
+PUT  /api/users/me       → cualquier usuario autenticado
+*                        → cualquier petición autenticada
+```
+
+#### application.properties
+
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/sistemaTurnos_DB?serverTimezone=UTC
+spring.jpa.hibernate.ddl-auto=update   # Crea/modifica tablas automáticamente
+spring.jpa.show-sql=true               # Imprime SQL generado (solo en desarrollo)
+
+jwt.secret=8f3a2b9c...    # Clave HMAC-SHA256 de 64 chars (256 bits)
+jwt.expiration=86400000   # 24 horas en milisegundos
+```
+
+> `ddl-auto=update` es útil en desarrollo pero **no debe usarse en producción**. En producción se usa `validate` o migraciones con Flyway/Liquibase.
+
+---
+
 ## FRONTEND (Angular 17)
 
-### ¿Cómo está organizado?
+### Estructura de carpetas
 
 ```
 src/app/
-├── core/                  → Núcleo de la app (servicios, modelos, interceptores)
-│   ├── models/            → Interfaces TypeScript (la forma de los datos)
-│   ├── services/          → Clases que hablan con el backend
-│   ├── guards/            → Protegen rutas según el rol del usuario
-│   └── interceptors/      → Modifican automáticamente cada petición HTTP
-├── features/              → Módulos visuales por funcionalidad
-│   ├── auth/              → Login y registro
+├── core/
+│   ├── models/               → Interfaces TypeScript (contratos de datos)
+│   │   ├── auth.model.ts
+│   │   ├── user.model.ts
+│   │   ├── appointment.model.ts
+│   │   ├── barber-service.model.ts
+│   │   └── work-schedule.model.ts
+│   ├── services/             → Lógica HTTP + estado reactivo
+│   │   ├── auth.service.ts
+│   │   ├── user.service.ts
+│   │   ├── appointment.service.ts
+│   │   ├── barber-service.service.ts
+│   │   └── work-schedule.service.ts
+│   ├── guards/
+│   │   └── auth.guard.ts     → Protege rutas según autenticación y rol
+│   └── interceptors/
+│       └── auth.interceptor.ts → Adjunta el JWT a cada petición HTTP
+├── features/
+│   ├── auth/
 │   │   ├── login/
 │   │   └── register/
-│   ├── dashboard/         → Pantallas principales por rol
+│   ├── dashboard/
 │   │   ├── admin-dashboard/
 │   │   └── barber-dashboard/
-│   └── appointments/      → Gestión de turnos
+│   └── appointments/
 │       ├── appointment-list/
 │       └── appointment-form/
-└── shared/                → Componentes reutilizables (botones, tarjetas, etc.)
+├── shared/                   → Componentes reutilizables
+└── environments/
+    ├── environment.ts        → { production: false, apiUrl: 'http://localhost:8080/api' }
+    └── environment.prod.ts   → { production: true, apiUrl: 'https://tu-dominio.com/api' }
+```
+
+### Standalone Components
+
+Angular 17 usa **standalone components** sin NgModules. Cada componente declara sus dependencias directamente en el decorador `@Component`. Esto simplifica el árbol de dependencias, mejora el tree-shaking del bundle y hace el código más predecible.
+
+```typescript
+@Component({
+  selector: 'app-admin-dashboard',
+  standalone: true,
+  templateUrl: './admin-dashboard.component.html',
+  styleUrl: './admin-dashboard.component.scss'
+})
+export class AdminDashboardComponent {}
 ```
 
 ---
 
-### Models (Modelos / Interfaces)
+### Models (interfaces TypeScript)
 
-Los modelos son como "moldes" que definen la forma exacta de los datos. Cuando el backend responde con un usuario, el frontend sabe exactamente qué campos esperar.
+Los modelos replican exactamente los DTOs del backend. Son interfaces (no clases) porque solo definen forma de datos, sin lógica ni instanciación.
 
 #### auth.model.ts
+
 ```typescript
-// Lo que se manda al login
 export interface LoginRequest {
   email: string;
   password: string;
 }
 
-// Lo que el backend responde tras hacer login
 export interface AuthResponse {
-  token: string;  // El "carnet de acceso" para futuras peticiones
+  token: string;   // JWT recibido tras login exitoso
   id: number;
   name: string;
   email: string;
-  role: UserRole; // 'ADMIN' | 'BARBER' | 'CLIENT'
+  role: UserRole;
 }
 ```
+
+> `AuthResponse` es lo que se persiste en `localStorage` para restaurar la sesión al recargar la página sin necesidad de volver a hacer login.
 
 ---
 
 #### user.model.ts
+
 ```typescript
-// Los tres roles posibles en el sistema
 export type UserRole = 'ADMIN' | 'BARBER' | 'CLIENT';
 
-// Versión simplificada de un usuario (para mostrar en listas)
+// Versión reducida: se usa dentro de AppointmentResponse para no exponer datos sensibles
 export interface UserSummary {
   id: number;
   name: string;
 }
 
-// Versión completa (para el panel de admin)
 export interface UserResponse {
   id: number;
   name: string;
   email: string;
   role: UserRole;
-  commissionRate: number | null; // null si no es barbero
+  commissionRate: number | null;  // null si el usuario no es BARBER
 }
 
-// Para que el admin edite un usuario
+// Usado por el ADMIN para editar datos de otro usuario
 export interface UpdateUserRequest {
   name: string;
   email: string;
   commissionRate: number | null;
 }
 
-// Para que el propio usuario edite su perfil
+// Requiere contraseña actual como verificación de identidad
 export interface UpdateProfileRequest {
   name: string;
   email: string;
@@ -203,222 +379,218 @@ export interface UpdateProfileRequest {
 ---
 
 #### appointment.model.ts
+
 ```typescript
-// Estados posibles de un turno
 export type AppointmentStatus = 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
 
-// Para crear un turno nuevo
-export interface CreateAppointmentRequest {
-  clientId: number;
-  barberId: number;
-  barberServiceId: number;
-  dateTime: string; // Formato: "2026-03-15T10:30:00"
-}
-
-// Lo que el backend devuelve al consultar un turno
 export interface AppointmentResponse {
   id: number;
   client: UserSummary;
   barber: UserSummary;
   barberService: BarberServiceResponse;
-  dateTime: string;
+  dateTime: string;                    // ISO 8601: "2026-03-15T10:30:00"
   status: AppointmentStatus;
   cancelReason: string | null;
-  priceLocked: number | null;      // Precio al momento del turno
-  shopCommission: number | null;   // Lo que gana la barbería
-  barberEarnings: number | null;   // Lo que gana el barbero
+  priceLocked: number | null;          // Precio capturado al momento de completar
+  shopCommission: number | null;
+  barberEarnings: number | null;
 }
 ```
 
 ---
 
 #### barber-service.model.ts
+
 ```typescript
-// Un servicio ofrecido (corte, barba, etc.)
 export interface BarberServiceResponse {
   id: number;
   name: string;
   price: number;
   durationMinutes: number;
-  finished: boolean; // true = servicio dado de baja
+  finished: boolean;    // Soft delete: oculto en UI pero no eliminado de BD
 }
 ```
 
 ---
 
 #### work-schedule.model.ts
+
 ```typescript
-// Días de la semana en inglés (como los envía el backend)
+// String union en lugar de número para legibilidad y alineamiento con el enum Java
 export type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
 
-// Horario de un barbero en un día específico
 export interface WorkScheduleResponse {
   id: number;
   barberId: number;
   dayOfWeek: DayOfWeek;
-  startTime: string; // Formato: "09:00"
-  endTime: string;   // Formato: "18:00"
+  startTime: string;   // "HH:mm"
+  endTime: string;
 }
 ```
 
 ---
 
-### Services (Servicios Angular)
+### Services y Signals
 
-Los servicios son las clases que realizan las peticiones HTTP al backend. Cada servicio:
-1. Tiene una URL base que apunta al endpoint correspondiente del backend.
-2. Guarda los datos en un **signal** (estado reactivo de Angular 17).
-3. Expone esos datos de forma de solo lectura al resto de la app.
+#### ¿Por qué Signals en lugar de BehaviorSubject (RxJS)?
+
+Angular 17 introduce Signals como mecanismo de estado reactivo nativo. Ventajas sobre `BehaviorSubject`:
+- No requiere `subscribe`/`unsubscribe` manual → sin memory leaks.
+- Detección de cambios granular (no por componente completo).
+- `computed()` reemplaza `combineLatest` + `map` para estados derivados.
+- `asReadonly()` expone el estado sin permitir mutación externa, forzando que los cambios pasen siempre por el servicio.
 
 ---
 
 #### AuthService
-Se encarga del login, logout y de saber quién está logueado en todo momento.
 
 ```typescript
-// URL base: http://localhost:8080/api/auth
 @Injectable({ providedIn: 'root' })
 export class AuthService {
 
-  // Signal: guarda el usuario actual en memoria
   private readonly _currentUser = signal<AuthResponse | null>(null);
 
-  // Solo lectura para los componentes
-  readonly currentUser = this._currentUser.asReadonly();
-
-  // Computed: se recalcula automáticamente cuando cambia _currentUser
+  readonly currentUser     = this._currentUser.asReadonly();
   readonly isAuthenticated = computed(() => this._currentUser() !== null);
-  readonly currentRole = computed(() => this._currentUser()?.role ?? null);
+  readonly currentRole     = computed(() => this._currentUser()?.role ?? null);
+
+  constructor() {
+    this.loadSessionFromStorage(); // Restaura sesión al recargar la página
+  }
+
+  login(request: LoginRequest) {
+    return this.http.post<AuthResponse>(`${this.baseUrl}/login`, request).pipe(
+      tap(response => {
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('currentUser', JSON.stringify(response));
+        this._currentUser.set(response);
+      })
+    );
+  }
+
+  logout(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('currentUser');
+    this._currentUser.set(null);
+    this.router.navigate(['/auth/login']);
+  }
 }
 ```
 
-**Flujo de login:**
-1. El usuario escribe email y contraseña.
-2. Se llama a `login()` → hace POST a `/api/auth/login`.
-3. El backend responde con un `token` y los datos del usuario.
-4. Se guarda en `localStorage` (para no perder la sesión al recargar).
-5. Se actualiza el signal `_currentUser`.
-
 ---
 
-#### UserService
-Gestión de usuarios (solo accesible por el admin).
+#### AppointmentService (ejemplo de computed sobre signal)
 
 ```typescript
-// URL base: http://localhost:8080/api/users
-export class UserService {
-  getAll()               // Lista todos los usuarios
-  getById(id)            // Obtiene uno por ID
-  update(id, request)    // Admin edita un usuario
-  updateProfile(request) // El usuario edita su propio perfil
-}
-```
-
----
-
-#### AppointmentService
-Gestión de turnos.
-
-```typescript
-// URL base: http://localhost:8080/api/appointments
+@Injectable({ providedIn: 'root' })
 export class AppointmentService {
-  getAll()              // Lista todos los turnos
-  getById(id)           // Obtiene uno
-  create(request)       // Crea un nuevo turno
-  update(id, request)   // Modifica fecha/servicio
-  cancel(id, request)   // Cancela con motivo
-  complete(id)          // Marca como completado
 
-  // Computed lists (se actualizan solos)
-  pendingAppointments   // Solo los PENDING
-  completedAppointments // Solo los COMPLETED
+  private readonly _appointments = signal<AppointmentResponse[]>([]);
+  readonly appointments = this._appointments.asReadonly();
+
+  // Se recalculan automáticamente cuando cambia _appointments
+  readonly pendingAppointments   = computed(() => this._appointments().filter(a => a.status === 'PENDING'));
+  readonly completedAppointments = computed(() => this._appointments().filter(a => a.status === 'COMPLETED'));
+
+  create(request: CreateAppointmentRequest) {
+    return this.http.post<AppointmentResponse>(this.baseUrl, request).pipe(
+      // Patrón inmutable: crea nuevo array en lugar de mutar el existente
+      // Necesario para que Angular detecte el cambio en el signal
+      tap(created => this._appointments.update(list => [...list, created]))
+    );
+  }
 }
 ```
 
 ---
 
-#### BarberServiceService
-Gestión de servicios de la barbería.
+#### Interceptor de autenticación (pendiente)
+
+`auth.interceptor.ts` está creado pero vacío. Su función: adjuntar automáticamente el JWT a cada petición saliente para no tener que hacerlo en cada servicio individualmente.
 
 ```typescript
-// URL base: http://localhost:8080/api/barber-services
-export class BarberServiceService {
-  getAll()              // Lista todos (activos y finalizados)
-  create(request)       // Crea un servicio nuevo
-  update(id, request)   // Edita nombre, precio o duración
-  finish(id)            // Da de baja un servicio (no se elimina, se marca finished=true)
+// Implementación pendiente
+export function authInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn) {
+  const token = inject(AuthService).getToken();
+  if (token) {
+    req = req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
+  }
+  return next(req);
 }
 ```
 
 ---
 
-#### WorkScheduleService
-Gestión de horarios de los barberos.
+#### Guard de rutas (pendiente)
+
+`auth.guard.ts` está creado pero vacío. Protegerá rutas privadas redirigiendo al login si el usuario no está autenticado o no tiene el rol requerido.
 
 ```typescript
-// URL base: http://localhost:8080/api/work-schedules
-export class WorkScheduleService {
-  getByBarber(barberId)  // Obtiene los horarios de un barbero específico
-  create(request)        // Agrega un día/horario
-  update(id, request)    // Cambia hora de entrada/salida
-  delete(id)             // Elimina un horario
-}
-```
-
----
-
-### Environment (Configuración de entornos)
-
-```typescript
-// environment.ts (desarrollo local)
-export const environment = {
-  production: false,
-  apiUrl: 'http://localhost:8080/api'
-};
-
-// environment.prod.ts (producción)
-export const environment = {
-  production: true,
-  apiUrl: 'https://tu-dominio.com/api'
+// Implementación pendiente
+export const authGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  return auth.isAuthenticated() ? true : inject(Router).createUrlTree(['/auth/login']);
 };
 ```
 
-Todos los servicios importan `environment.apiUrl` para construir sus URLs. Así, con un solo cambio en este archivo, toda la app apunta a otro servidor.
-
 ---
 
-## Flujo completo de una petición
-
-Ejemplo: **el cliente reserva un turno**
+## Flujo completo: login + petición autenticada
 
 ```
-[Componente AppointmentForm]
-        ↓ llama a
-[AppointmentService.create(request)]
-        ↓ hace POST HTTP a
-[Backend: POST /api/appointments]
-        ↓ pasa por
-[AppointmentController → AppointmentService → AppointmentRepository]
-        ↓ guarda en
-[Base de datos MySQL]
-        ↓ responde con
-[AppointmentResponse (JSON)]
-        ↓ el servicio actualiza
-[Signal _appointments]
-        ↓ los componentes que usan
-[appointments signal] se actualizan automáticamente
+[LoginComponent]
+  → llama AuthService.login({ email, password })
+  → POST http://localhost:8080/api/auth/login
+  → Backend valida BCrypt, genera JWT
+  → Frontend guarda token en localStorage + signal
+  → Redirect al dashboard según rol
+
+[Cualquier componente posterior]
+  → llama, p.ej: AppointmentService.getAll()
+  → HttpClient hace GET /api/appointments
+  → [auth.interceptor] inyecta Authorization: Bearer <token>
+  → [JwtAuthFilter] valida token, carga usuario en SecurityContext
+  → Controller responde con lista de turnos (JSON)
+  → Servicio guarda en signal _appointments
+  → Componentes que consumen el signal se actualizan automáticamente
 ```
 
 ---
 
-## Resumen rápido
+## Estado actual del proyecto
 
-| Concepto | ¿Qué es? | Ejemplo |
+### Completado
+- Entidades JPA: `User`, `Appointment`, `Service`, `WorkSchedule`
+- Seguridad: JWT stateless, BCrypt, roles por endpoint, CORS configurado
+- Separación de `UserDetailsServiceImpl` para eliminar dependencia circular
+- Todos los modelos TypeScript del frontend (5 archivos)
+- Todos los servicios Angular con signals y computed (5 servicios)
+- Archivos `environment.ts` y `environment.prod.ts`
+- Todos los componentes creados con nombre de clase correcto
+
+### Pendiente
+- Implementar `auth.interceptor.ts`
+- Implementar `auth.guard.ts`
+- Implementar templates HTML de cada componente
+- Implementar lógica en los componentes (inyectar servicios, manejar formularios)
+- Definir rutas en `app.routes.ts`
+- Completar `DataSeeder.java` (datos iniciales en la BD)
+- Alinear `WorkSchedule.java`: agregar `@Entity` y cambiar `Integer diaSemana` por enum `DayOfWeek`
+
+---
+
+## Tabla de referencia rápida
+
+| Concepto | Capa | Ejemplo |
 |---|---|---|
-| **Entity (Java)** | Tabla en la base de datos | `Appointment.java` |
-| **DTO** | Datos que viajan entre backend y frontend | `AppointmentResponse.java` |
-| **Interface (TS)** | Molde de datos en el frontend | `AppointmentResponse` en `appointment.model.ts` |
-| **Service (Angular)** | Clase que hace peticiones HTTP | `AppointmentService` |
-| **Signal** | Estado reactivo (reemplaza a `BehaviorSubject`) | `_appointments = signal([])` |
-| **Computed** | Valor derivado de un signal | `pendingAppointments` |
-| **Environment** | Configuración por entorno | `apiUrl` en `environment.ts` |
+| `@Entity` | Backend — BD | `User.java`, `Appointment.java` |
+| `@Repository` | Backend — persistencia | `UserRepository extends JpaRepository` |
+| `@Service` | Backend — lógica | `AppointmentService.java` |
+| `@RestController` | Backend — API | `UserController.java` |
+| DTO | Backend — contrato API | `UserResponse.java`, `CreateAppointmentRequest.java` |
+| `interface` (TS) | Frontend — tipado | `AppointmentResponse` en `appointment.model.ts` |
+| `signal` | Frontend — estado | `_appointments = signal([])` |
+| `computed` | Frontend — estado derivado | `pendingAppointments` |
+| `interceptor` | Frontend — HTTP middleware | `auth.interceptor.ts` |
+| `guard` | Frontend — protección de rutas | `auth.guard.ts` |
+| `environment` | Frontend — configuración | `apiUrl` en `environment.ts` |

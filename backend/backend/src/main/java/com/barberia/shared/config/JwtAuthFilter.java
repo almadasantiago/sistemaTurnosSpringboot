@@ -31,16 +31,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         final String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+    System.out.println(">>> No hay Bearer token");
+    filterChain.doFilter(request, response);
+    return;
+}
 
-        final String token = authHeader.substring(7);
+final String token = authHeader.substring(7);
+System.out.println(">>> Token recibido: " + token);
 
-        if (!jwtService.isTokenValid(token)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+if (!jwtService.isTokenValid(token)) {
+    System.out.println(">>> Token inválido");
+    filterChain.doFilter(request, response);
+    return;
+}
+
+System.out.println(">>> Token válido, email: " + jwtService.extractEmail(token));
 
         final String email = jwtService.extractEmail(token);
 
