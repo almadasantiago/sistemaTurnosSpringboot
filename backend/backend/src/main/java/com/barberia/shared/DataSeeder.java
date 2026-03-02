@@ -73,7 +73,7 @@ public class DataSeeder implements CommandLineRunner {
             System.out.println(">>> DataSeeder: barbero Rodrigo Méndez creado con horarios");
         }
 
-        // SERVICIOS
+
         if (barberServiceRepository.count() == 0) {
             BarberService corte = new BarberService();
             corte.setNombre("Corte de cabello");

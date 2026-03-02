@@ -5,35 +5,59 @@ import java.time.LocalDateTime;
 import com.barberia.barberservices.BarberService;
 import com.barberia.users.User;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import lombok.Data;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-@Data
+@Table(name = "appointments")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Appointment {
+
     @Id
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
-    private User cliente; 
+    @JoinColumn(name = "cliente_id")
+    private User cliente;
 
     @ManyToOne
-    private User barbero; 
+    @JoinColumn(name = "barbero_id")
+    private User barbero;
 
     @ManyToOne
-    private BarberService service; 
+    @JoinColumn(name = "service_id")
+    private BarberService service;
 
-    private LocalDateTime fechaHoraInicio; 
-    private LocalDateTime fechaHoraFin; 
+    @Column(name = "fecha_hora_inicio")
+    private LocalDateTime fechaHoraInicio;
 
-    private String estado; 
+    @Column(name = "fecha_hora_fin")
+    private LocalDateTime fechaHoraFin;
 
-    private Double precioFinal; 
-    private Double comisionBarberia; 
-    private Double gananciaBarbero; 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AppointmentStatus estado = AppointmentStatus.PENDING;
+
+    @Column(name = "precio_final")
+    private Double precioFinal;
+
+    @Column(name = "comision_barberia")
+    private Double comisionBarberia;
+
+    @Column(name = "ganancia_barbero")
+    private Double gananciaBarbero;
 }
