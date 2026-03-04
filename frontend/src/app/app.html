@@ -1,1 +1,6 @@
-<router-outlet></router-outlet>
+<div class="app-root">
+  <button class="theme-toggle" (click)="toggleTheme()" [title]="isDark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
+    <span class="theme-icon">{{ isDark() ? '☀️' : '🌙' }}</span>
+  </button>
+  <router-outlet />
+</div>

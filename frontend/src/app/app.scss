@@ -1,0 +1,33 @@
+.app-root {
+  min-height: 100vh;
+  position: relative;
+}
+
+.theme-toggle {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+
+  &:hover {
+    transform: scale(1.1) rotate(15deg);
+    box-shadow: var(--shadow-hover);
+    border-color: var(--primary);
+  }
+
+  .theme-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+}
