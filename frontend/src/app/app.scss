@@ -25,9 +25,11 @@
     box-shadow: var(--shadow-hover);
     border-color: var(--primary);
   }
+}
 
-  .theme-icon {
-    font-size: 20px;
-    line-height: 1;
-  }
+.theme-icon {
+  width: 26px;
+  height: 26px;
+  display: block;
+  flex-shrink: 0;
 }

@@ -1,6 +1,22 @@
 <div class="app-root">
   <button class="theme-toggle" (click)="toggleTheme()" [title]="isDark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
-    <span class="theme-icon">{{ isDark() ? '☀️' : '🌙' }}</span>
+    @if (isDark()) {
+      <svg class="theme-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="4" fill="#c0392b"/>
+        <line x1="12" y1="3" x2="12" y2="5.5" stroke="#c0392b" stroke-width="2" stroke-linecap="round"/>
+        <line x1="12" y1="18.5" x2="12" y2="21" stroke="#c0392b" stroke-width="2" stroke-linecap="round"/>
+        <line x1="3" y1="12" x2="5.5" y2="12" stroke="#c0392b" stroke-width="2" stroke-linecap="round"/>
+        <line x1="18.5" y1="12" x2="21" y2="12" stroke="#c0392b" stroke-width="2" stroke-linecap="round"/>
+        <line x1="5.64" y1="5.64" x2="7.41" y2="7.41" stroke="#c0392b" stroke-width="2" stroke-linecap="round"/>
+        <line x1="16.59" y1="16.59" x2="18.36" y2="18.36" stroke="#c0392b" stroke-width="2" stroke-linecap="round"/>
+        <line x1="18.36" y1="5.64" x2="16.59" y2="7.41" stroke="#c0392b" stroke-width="2" stroke-linecap="round"/>
+        <line x1="7.41" y1="16.59" x2="5.64" y2="18.36" stroke="#c0392b" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    } @else {
+      <svg class="theme-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="#c0392b"/>
+      </svg>
+    }
   </button>
   <router-outlet />
 </div>
