@@ -32,9 +32,9 @@ public class AppointmentService {
                 .orElseThrow(() -> new RuntimeException("Servicio no encontrado"));
 
         LocalDateTime fechaHoraFin = request.getFechaHoraInicio()
-                .plusMinutes(service.getDuracionMinutos());
+                .plusMinutes(service.getDurationMinutes());
 
-        Double precioFinal = service.getPrecio();
+        Double precioFinal = service.getPrice();
         Double gananciaBarbero = precioFinal * barbero.getCommissionRate();
         Double comisionBarberia = precioFinal - gananciaBarbero;
 
@@ -105,9 +105,9 @@ public class AppointmentService {
                 ),
                 new AppointmentResponse.ServiceSummary(
                         appointment.getService().getId(),
-                        appointment.getService().getNombre(),
-                        appointment.getService().getPrecio(),
-                        appointment.getService().getDuracionMinutos()
+                        appointment.getService().getName(),
+                        appointment.getService().getPrice(),
+                        appointment.getService().getDurationMinutes()
                 ),
                 appointment.getFechaHoraInicio(),
                 appointment.getFechaHoraFin(),
