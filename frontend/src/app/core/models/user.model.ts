@@ -19,14 +19,13 @@ export interface RegisterRequest {
   password: string;
   role: Exclude<UserRole, 'ADMIN'>;
 }
-// admin edita acá 
+
 export interface UpdateUserRequest {
   name: string;
   email: string;
   commissionRate: number | null;
 }
 
-// usuario edita acá 
 export interface UpdateProfileRequest {
   name: string;
   email: string;

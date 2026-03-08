@@ -12,11 +12,10 @@ import {
 export class BarberServiceService {
 
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiUrl}/barber-services`;
+ private readonly baseUrl = `${environment.apiUrl}/barberservices`;
 
   private readonly _services = signal<BarberServiceResponse[]>([]);
 
-  // Solo exponemos los servicios que no están finalizados
   readonly activeServices = this._services.asReadonly();
 
   getAll() {

@@ -13,11 +13,14 @@ export class UserService {
   private readonly _users = signal<UserResponse[]>([]);
   readonly users = this._users.asReadonly();
 
-  // GET solo de Admin
   getAll() {
     return this.http.get<UserResponse[]>(this.baseUrl).pipe(
       tap(users => this._users.set(users))
     );
+  }
+
+  getBarbers() {
+    return this.http.get<UserResponse[]>(`${this.baseUrl}/barbers`);
   }
 
   getById(id: number) {
@@ -33,7 +36,7 @@ export class UserService {
       })
     );
   }
-  
+
   updateProfile(request: UpdateProfileRequest) {
     return this.http.put<UserResponse>(`${this.baseUrl}/me`, request);
   }

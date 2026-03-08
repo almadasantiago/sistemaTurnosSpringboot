@@ -8,10 +8,10 @@ export type AppointmentStatus =
   | 'CANCELLED';
 
 export interface CreateAppointmentRequest {
-  clientId: number;
-  barberId: number;
-  barberServiceId: number;
-  dateTime: string;
+  clienteId: number;
+  barberoId: number;
+  serviceId: number;
+  fechaHoraInicio: string;
 }
 
 export interface UpdateAppointmentRequest {
@@ -29,8 +29,8 @@ export interface AppointmentResponse {
   barber: UserSummary;
   barberService: BarberServiceResponse;
   dateTime: string;
+  endDateTime: string;
   status: AppointmentStatus;
-  cancelReason: string | null;
   priceLocked: number | null;
   shopCommission: number | null;
   barberEarnings: number | null;

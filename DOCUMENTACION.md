@@ -568,14 +568,44 @@ export const authGuard: CanActivateFn = () => {
 - Archivos `environment.ts` y `environment.prod.ts`
 - Todos los componentes creados con nombre de clase correcto
 
+
 ### Pendiente
 - Implementar `auth.interceptor.ts`
 - Implementar `auth.guard.ts`
 - Implementar templates HTML de cada componente
 - Implementar lógica en los componentes (inyectar servicios, manejar formularios)
 - Definir rutas en `app.routes.ts`
-- Completar `DataSeeder.java` (datos iniciales en la BD)
 - Alinear `WorkSchedule.java`: agregar `@Entity` y cambiar `Integer diaSemana` por enum `DayOfWeek`
+
+---
+
+## DataSeeder (Carga de datos iniciales)
+
+Se implementó un `DataSeeder` como un `@Configuration` de Spring Boot que expone un `CommandLineRunner` para poblar la base de datos automáticamente al iniciar la aplicación si las tablas están vacías.
+
+**Propósito:**
+- Facilitar el desarrollo y testing inicial con datos realistas.
+- Evitar la necesidad de crear manualmente usuarios, servicios y turnos en cada entorno nuevo.
+
+**¿Qué datos siembra?**
+- **Usuarios:**
+  - Admin (admin@barber.com / admin123)
+  - Barbero (barber@barber.com / barber123, comisión 30%)
+  - Cliente (client@barber.com / client123)
+- **Servicios:**
+  - Corte de pelo (1500 ARS, 30 min)
+  - Afeitado de barba (1000 ARS, 20 min)
+- **Horarios de trabajo:**
+  - Para el barbero, todos los días de la semana de 9:00 a 18:00
+- **Turno de ejemplo:**
+  - Un turno pendiente para el cliente con el barbero y el servicio "Corte de pelo" para el día siguiente a las 10:00
+
+**Integración:**
+- El seeder solo ejecuta la carga si la tabla correspondiente está vacía (`count() == 0`), evitando duplicados.
+- Utiliza los repositorios de Spring Data JPA y el `PasswordEncoder` para las contraseñas.
+- Permite iniciar el sistema y probar flujos completos desde el frontend sin pasos manuales.
+
+---
 
 ---
 

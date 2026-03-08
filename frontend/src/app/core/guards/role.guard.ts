@@ -3,8 +3,6 @@ import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { UserRole } from '../models/user.model';
 
-// Protege rutas que requieren un rol específico
-// Uso: canActivate: [() => roleGuard('ADMIN')]
 export const roleGuard = (requiredRole: UserRole): CanActivateFn => {
   return () => {
     const authService = inject(AuthService);
@@ -14,9 +12,11 @@ export const roleGuard = (requiredRole: UserRole): CanActivateFn => {
       return true;
     }
 
-    // Si está autenticado pero no tiene el rol, lo mandamos al inicio
-    // No al login, porque ya está logueado
-    
-    return router.createUrlTree(['/']);
+    const role = authService.currentRole();
+    if (role === 'ADMIN') return router.createUrlTree(['/dashboard/admin']);
+    if (role === 'BARBER') return router.createUrlTree(['/dashboard/barber']);
+    if (role === 'CLIENT') return router.createUrlTree(['/dashboard/client']);
+
+    return router.createUrlTree(['/auth/login']);
   };
 };

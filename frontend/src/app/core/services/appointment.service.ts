@@ -18,7 +18,6 @@ export class AppointmentService {
   private readonly _appointments = signal<AppointmentResponse[]>([]);
   readonly appointments = this._appointments.asReadonly();
 
-
   readonly pendingAppointments = computed(() =>
     this._appointments().filter(a => a.status === 'PENDING')
   );
@@ -31,6 +30,10 @@ export class AppointmentService {
     return this.http.get<AppointmentResponse[]>(this.baseUrl).pipe(
       tap(appointments => this._appointments.set(appointments))
     );
+  }
+
+  getMyPendingAppointments() {
+    return this.http.get<AppointmentResponse[]>(`${this.baseUrl}/my/pending`);
   }
 
   getById(id: number) {
@@ -65,7 +68,6 @@ export class AppointmentService {
     );
   }
 
-  
   cancel(id: number, request: CancelAppointmentRequest) {
     return this.http.patch<AppointmentResponse>(`${this.baseUrl}/${id}/cancel`, request).pipe(
       tap(updated => {

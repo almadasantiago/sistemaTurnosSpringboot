@@ -22,12 +22,17 @@ public class UserController {
         return ResponseEntity.ok(userService.getAll());
     }
 
+    @GetMapping("/barbers")
+    public ResponseEntity<List<UserResponse>> getBarbers() {
+        return ResponseEntity.ok(userService.getBarbers());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getById(
-        @PathVariable Long id,
-        @AuthenticationPrincipal UserDetails userDetails) {
-    User requester = userService.findByEmail(userDetails.getUsername());
-    return ResponseEntity.ok(userService.getById(id, requester));
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User requester = userService.findByEmail(userDetails.getUsername());
+        return ResponseEntity.ok(userService.getById(id, requester));
     }
 
     @PostMapping("/barbers")

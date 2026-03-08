@@ -22,12 +22,19 @@ public class UserService {
                 .toList();
     }
 
-    public UserResponse getById(Long id, User requester) {
-    if (requester.getRole() != Role.ADMIN && !requester.getId().equals(id)) {
-        throw new IllegalArgumentException("No tenés permiso para ver este usuario");
+    public List<UserResponse> getBarbers() {
+        return userRepository.findByRole(Role.BARBER)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
-    return toResponse(findOrThrow(id));
-}
+
+    public UserResponse getById(Long id, User requester) {
+        if (requester.getRole() != Role.ADMIN && !requester.getId().equals(id)) {
+            throw new IllegalArgumentException("No tenés permiso para ver este usuario");
+        }
+        return toResponse(findOrThrow(id));
+    }
 
     public UserResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.email())) {

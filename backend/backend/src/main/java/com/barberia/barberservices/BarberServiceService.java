@@ -15,9 +15,9 @@ public class BarberServiceService {
 
     public BarberServiceResponse create(CreateBarberServiceRequest request) {
         BarberService service = new BarberService();
-        service.setNombre(request.getNombre());
-        service.setPrecio(request.getPrecio());
-        service.setDuracionMinutos(request.getDuracionMinutos());
+        service.setName(request.getName());
+        service.setPrice(request.getPrice());
+        service.setDurationMinutes(request.getDurationMinutes());
         service.setFinished(false);
 
         return toResponse(barberServiceRepository.save(service));
@@ -35,9 +35,9 @@ public class BarberServiceService {
         BarberService service = barberServiceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Servicio no encontrado"));
 
-        service.setNombre(request.getNombre());
-        service.setPrecio(request.getPrecio());
-        service.setDuracionMinutos(request.getDuracionMinutos());
+        service.setName(request.getName());
+        service.setPrice(request.getPrice());
+        service.setDurationMinutes(request.getDurationMinutes());
 
         return toResponse(barberServiceRepository.save(service));
     }
@@ -52,9 +52,9 @@ public class BarberServiceService {
     private BarberServiceResponse toResponse(BarberService service) {
         return new BarberServiceResponse(
                 service.getId(),
-                service.getNombre(),
-                service.getPrecio(),
-                service.getDuracionMinutos(),
+                service.getName(),
+                service.getPrice(),
+                service.getDurationMinutes(),
                 service.getFinished()
         );
     }

@@ -12,9 +12,9 @@ public class BarberService {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String nombre;
-    private Double precio;
-    private Integer duracionMinutos;
+    private String name;
+    private Double price;
+    private Integer durationMinutes;
 
     private Boolean finished = false;
 }

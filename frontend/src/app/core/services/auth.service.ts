@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { LoginRequest, AuthResponse } from '../models/auth.model';
+import { LoginRequest, AuthResponse, RegisterRequest } from '../models/auth.model';
 import { UserRole } from '../models/user.model';
 
 @Injectable({ providedIn: 'root' })
@@ -16,7 +16,6 @@ export class AuthService {
   private readonly _currentUser = signal<AuthResponse | null>(null);
 
   readonly currentUser = this._currentUser.asReadonly();
-
   readonly isAuthenticated = computed(() => this._currentUser() !== null);
   readonly currentRole = computed(() => this._currentUser()?.role ?? null);
 
@@ -32,6 +31,10 @@ export class AuthService {
         this._currentUser.set(response);
       })
     );
+  }
+
+  register(request: RegisterRequest) {
+    return this.http.post<void>(`${this.baseUrl}/register`, request);
   }
 
   logout(): void {

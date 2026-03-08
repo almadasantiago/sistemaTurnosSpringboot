@@ -7,8 +7,8 @@ import lombok.Getter;
 @AllArgsConstructor
 public class BarberServiceResponse {
     private Long id;
-    private String nombre;
-    private Double precio;
-    private Integer duracionMinutos;
+    private String name;
+    private Double price;
+    private Integer durationMinutes;
     private Boolean finished;
 }

@@ -73,6 +73,13 @@ public class AppointmentService {
                 .toList();
     }
 
+    public List<AppointmentResponse> getPendingByCliente(Long clienteId) {
+        return appointmentRepository.findByClienteIdAndEstado(clienteId, AppointmentStatus.PENDING)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public AppointmentResponse updateStatus(Long id, UpdateAppointmentStatusRequest request) {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Turno no encontrado"));
@@ -88,12 +95,20 @@ public class AppointmentService {
     private AppointmentResponse toResponse(Appointment appointment) {
         return new AppointmentResponse(
                 appointment.getId(),
-                appointment.getCliente().getId(),
-                appointment.getCliente().getName(),
-                appointment.getBarbero().getId(),
-                appointment.getBarbero().getName(),
-                appointment.getService().getId(),
-                appointment.getService().getNombre(),
+                new AppointmentResponse.ClientSummary(
+                        appointment.getCliente().getId(),
+                        appointment.getCliente().getName()
+                ),
+                new AppointmentResponse.ClientSummary(
+                        appointment.getBarbero().getId(),
+                        appointment.getBarbero().getName()
+                ),
+                new AppointmentResponse.ServiceSummary(
+                        appointment.getService().getId(),
+                        appointment.getService().getNombre(),
+                        appointment.getService().getPrecio(),
+                        appointment.getService().getDuracionMinutos()
+                ),
                 appointment.getFechaHoraInicio(),
                 appointment.getFechaHoraFin(),
                 appointment.getEstado(),

@@ -6,7 +6,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class CreateBarberServiceRequest {
-    private String nombre;
-    private Double precio;
-    private Integer duracionMinutos;
+    private String name;
+    private Double price;
+    private Integer durationMinutes;
 }
