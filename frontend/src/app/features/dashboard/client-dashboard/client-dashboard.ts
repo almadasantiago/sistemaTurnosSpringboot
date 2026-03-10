@@ -66,15 +66,40 @@ export class ClientDashboardComponent implements OnInit {
     }
   }
 
+  private readonly SERVICE_IMAGES: Record<string, string> = {
+    'Corte de pelo': 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=400',
+    'Afeitado de barba': 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?q=80&w=400',
+    'Barba': 'https://images.unsplash.com/photo-1599351431247-f10b21817021?q=80&w=400',
+    'Corte y tintura': 'https://images.unsplash.com/photo-1605497788044-5a32c7078486?q=80&w=400',
+    'Corte y barba': 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=400'
+  };
+
   private loadServices(): void {
     this.isLoadingServices.set(true);
     this.barberServiceService.getAll().subscribe({
       next: (data: BarberServiceResponse[]) => {
-        this.services.set(data);
+        const modifiedBackendServices = data.map(s => ({
+          ...s,
+          durationMinutes: s.name.toLowerCase().includes('barba') ? 90 : 60
+        }));
+
+        const extraServices: BarberServiceResponse[] = [
+          { id: 998, name: 'Barba', price: 8000, durationMinutes: 30, finished: false },
+          { id: 999, name: 'Corte y tintura', price: 20000, durationMinutes: 90, finished: false }
+        ];
+        
+        const existingNames = modifiedBackendServices.map(s => s.name.toLowerCase());
+        const filteredExtras = extraServices.filter(s => !existingNames.includes(s.name.toLowerCase()));
+        
+        this.services.set([...modifiedBackendServices, ...filteredExtras]);
         this.isLoadingServices.set(false);
       },
       error: () => this.isLoadingServices.set(false)
     });
+  }
+
+  getServiceImage(name: string): string {
+    return this.SERVICE_IMAGES[name] || 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=400';
   }
 
   private loadBarbers(): void {
